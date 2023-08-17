@@ -1,0 +1,96 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <!-- https://pdf-lib.js.org/ -->
+    <script src="https://unpkg.com/pdf-lib"></script> 
+    <script src="database.js"></script>
+    
+    <!-- Style the page -->
+    <style>
+        body {
+            display:flex;
+        }
+        
+        .right-pane {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: aquamarine;
+            border: 5px solid red;
+            width: 50%;
+        }    
+        #button {
+            height: 5em;
+            width: 10em;
+            background-color: blue;
+            color: white;
+            margin-top: 5em;
+        }
+        form{padding-top:5em;}
+        
+    </style>
+</head>
+    <!-- Put elements on the page --> 
+    <!-- iframe on the left and button and check boxes on the right -->
+  <body>
+    <iframe id="pdf" style="width: 50%; height: 100%;"></iframe>
+    <div class="right-pane">
+        <button id="button">Create</button>
+        <form>
+            <input type="checkbox" name="question" id="question1" value=0>
+            <label for="question1">Question 1</label>
+            <input type="checkbox" name="question" id="question2" value=1>
+            <label for="question2">Question 2</label>
+            <input type="checkbox" name="question" id="question3" value=2>
+            <label for="question3">Question 3</label>
+        </form>
+    </div>
+  </body>
+  
+  <script> 
+    //Excute when button clicked
+    document.getElementById('button').addEventListener("click", ()=>{
+        
+        //Get an array checkedQuestions of the checked boxes
+        let checkboxes = document.querySelectorAll('input[name="question"]:checked');
+        let checkedQuestions = [];
+
+        checkboxes.forEach((checkbox)=>{
+            checkedQuestions.push(checkbox.value);
+        });
+
+        //Create the PDF
+        createPdf();
+        async function createPdf() {
+        
+        const pdfDoc = await PDFLib.PDFDocument.create();
+        const page = pdfDoc.addPage([350, 400]);
+        
+        //Add the pictures, one after the other
+        let deltaHeight = 0;
+        for (let n=0; n<checkedQuestions.length; n++){
+            const pngUrl = database[checkedQuestions[n]].image_location;
+            const pngImageBytes = await fetch(pngUrl).then((res) => res.arrayBuffer());
+            const pngImage = await pdfDoc.embedPng(pngImageBytes);
+            const pngDims = pngImage.scale(0.3);
+            deltaHeight = deltaHeight + pngDims.height + 20;
+            console.log(deltaHeight)
+
+            page.drawImage(pngImage, {
+                x: 10,
+                y: page.getHeight() - deltaHeight,
+                width: pngDims.width,
+                height: pngDims.height,
+            });
+        }
+
+        //Save PDF Data        
+        const pdfDataUri = await pdfDoc.saveAsBase64({ dataUri: true });
+        //Display PDF in iframe.
+        document.getElementById('pdf').src = pdfDataUri;
+        }
+    });
+   
+  </script>
+</html>
